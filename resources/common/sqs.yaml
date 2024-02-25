@@ -1,0 +1,28 @@
+Resources:
+  MyQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: MyQueue
+      RedrivePolicy: 
+        deadLetterTargetArn: !GetAtt MyDLQ.Arn
+        maxReceiveCount: 3
+  
+  MyQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref MyQueue
+      PolicyDocument:
+        Statement:
+          - Action:
+            - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt MyQueue.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"
+
+  MyDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: MyDLQ

@@ -1,0 +1,68 @@
+Resources:
+  ElasticIPebRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: 'EventBridge Rule catching Elastic IP creation'
+      EventPattern:
+        detail-type:
+          - 'AWS API Call via CloudTrail'
+        source:
+          - 'aws.ec2'
+        detail:
+          eventSource:
+            - 'ec2.amazonaws.com'
+          eventName:
+            - 'AllocateAddress'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt MyQueue.Arn
+          Id: 'MyQueue'
+          RetryPolicy:
+            MaximumRetryAttempts: 4
+            MaximumEventAgeInSeconds: 300
+          DeadLetterConfig:
+            Arn: !GetAtt EventBusDLQQueue.Arn
+
+  PublicIPebRule:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      Description: 'EventBridge Rule catching public IP address changes'
+      EventPattern:
+        detail-type:
+          - 'AWS API Call via CloudTrail'
+        source:
+          - 'aws.ec2'
+        detail:
+          eventSource:
+            - 'ec2.amazonaws.com'
+          eventName:
+            - 'RunInstances'
+      State: 'ENABLED'
+      Targets:
+        - Arn: !GetAtt MyQueue.Arn
+          Id: 'MyQueue'
+          RetryPolicy:
+            MaximumRetryAttempts: 4
+            MaximumEventAgeInSeconds: 300
+          DeadLetterConfig:
+            Arn: !GetAtt EventBusDLQQueue.Arn
+          
+  EventBusDLQQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: EventBusDLQQueue
+
+  EventBusDLQQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref EventBusDLQQueue
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt EventBusDLQQueue.Arn
+            Principal:
+              Service:
+                - "events.amazonaws.com"

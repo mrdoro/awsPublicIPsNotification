@@ -1,0 +1,15 @@
+ipcatcherLambda:
+  handler: src/ipcatcher/function.lambda_handler
+  runtime: python3.11 
+  memorySize: 128
+  timeout: 3
+  role: ipcatcherLambdaRole
+  environment:
+    SNS_TOPIC: ${self:custom.env.Chatboot_SNS_TOPIC_ARN}
+  events:
+    - sqs:
+        arn:
+          Fn::GetAtt:
+            - MyQueue
+            - Arn
+        batchSize: 1
